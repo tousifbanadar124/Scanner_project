@@ -1,0 +1,743 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ScanForge — Forge any link into a code</title>
+<meta name="description" content="A fast, private QR code generator. Build codes for links, text, Wi-Fi, email, phone and contact cards — then download in PNG or SVG.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
+<style>
+  :root{
+    --red: #E8291C;
+    --red-dark: #B31712;
+    --red-deep: #7A0F10;
+    --red-soft: #FDEAE8;
+    --white: #FFFFFF;
+    --paper: #FFFBFA;
+    --ink: #201412;
+    --ash: #776b68;
+    --line: #F1DEDB;
+    --shadow: 0 20px 40px -20px rgba(122,15,16,0.25);
+    --radius: 14px;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  html{scroll-behavior:smooth;}
+  body{
+    font-family:'Inter', sans-serif;
+    background:var(--paper);
+    color:var(--ink);
+    line-height:1.5;
+    -webkit-font-smoothing:antialiased;
+  }
+  h1,h2,h3, .display{
+    font-family:'Space Grotesk', sans-serif;
+    letter-spacing:-0.01em;
+  }
+  .mono{ font-family:'JetBrains Mono', monospace; }
+  a{color:inherit;}
+  img,svg{display:block;}
+  .wrap{ max-width:1180px; margin:0 auto; padding:0 28px; }
+
+  /* ---------- finder-pattern mark, used as logo / bullets / motif ---------- */
+  .finder{ display:inline-block; }
+  .finder rect.outer{ fill:none; }
+  .finder-mark{ width:30px; height:30px; flex-shrink:0; }
+
+  /* ---------- header ---------- */
+  header{
+    position:sticky; top:0; z-index:50;
+    background:rgba(255,251,250,0.9);
+    backdrop-filter:blur(8px);
+    border-bottom:1px solid var(--line);
+  }
+  .nav{ display:flex; align-items:center; justify-content:space-between; padding:18px 0; }
+  .brand{ display:flex; align-items:center; gap:10px; font-weight:700; font-size:1.15rem; }
+  .brand span.tag{ font-family:'JetBrains Mono', monospace; font-size:0.62rem; font-weight:500; color:var(--red); background:var(--red-soft); padding:2px 6px; border-radius:4px; letter-spacing:0.06em; margin-left:2px; }
+  .nav-links{ display:flex; gap:32px; align-items:center; }
+  .nav-links a{ text-decoration:none; color:var(--ash); font-size:0.92rem; font-weight:500; transition:color .15s; }
+  .nav-links a:hover{ color:var(--red); }
+  .nav-cta{ background:var(--ink); color:var(--white); padding:9px 18px; border-radius:8px; font-size:0.88rem; font-weight:600; text-decoration:none; }
+
+  /* ---------- hero ---------- */
+  .hero{ padding:56px 0 40px; }
+  .eyebrow{
+    display:inline-flex; align-items:center; gap:8px;
+    font-family:'JetBrains Mono', monospace; font-size:0.72rem; font-weight:600;
+    color:var(--red-dark); text-transform:uppercase; letter-spacing:0.08em;
+    background:var(--red-soft); padding:6px 12px; border-radius:20px; margin-bottom:18px;
+  }
+  .hero h1{ font-size:clamp(2.1rem, 4.2vw, 3.2rem); font-weight:700; max-width:640px; line-height:1.08; }
+  .hero h1 em{ font-style:normal; color:var(--red); }
+  .hero p.sub{ color:var(--ash); font-size:1.08rem; max-width:520px; margin-top:16px; }
+
+  .studio{
+    display:grid;
+    grid-template-columns: 1.15fr 0.85fr;
+    gap:28px;
+    margin-top:40px;
+    align-items:start;
+  }
+  @media (max-width: 900px){ .studio{ grid-template-columns:1fr; } }
+
+  .panel{
+    background:var(--white);
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    padding:26px;
+    position:relative;
+  }
+  .panel::before, .panel::after{
+    content:''; position:absolute; width:16px; height:16px; border:2.5px solid var(--red);
+  }
+  .panel::before{ top:12px; left:12px; border-right:none; border-bottom:none; }
+  .panel::after{ bottom:12px; right:12px; border-left:none; border-top:none; }
+
+  /* type tabs */
+  .tabs{ display:flex; gap:6px; flex-wrap:wrap; margin-bottom:22px; }
+  .tab{
+    font-family:'JetBrains Mono', monospace;
+    font-size:0.76rem; font-weight:600; letter-spacing:0.02em;
+    padding:8px 13px; border-radius:8px; border:1px solid var(--line);
+    background:var(--paper); color:var(--ash); cursor:pointer; transition:all .15s;
+  }
+  .tab:hover{ border-color:var(--red); color:var(--red-dark); }
+  .tab.active{ background:var(--ink); border-color:var(--ink); color:var(--white); }
+
+  .field{ margin-bottom:14px; }
+  .field label{ display:block; font-size:0.8rem; font-weight:600; margin-bottom:6px; color:var(--ink); }
+  .field .hint{ font-size:0.74rem; color:var(--ash); margin-top:5px; }
+  .field input[type=text], .field input[type=tel], .field input[type=email], .field input[type=password], .field textarea, .field select{
+    width:100%; border:1.5px solid var(--line); border-radius:8px; padding:10px 12px;
+    font-family:'Inter', sans-serif; font-size:0.92rem; color:var(--ink); background:var(--paper);
+    outline:none; transition:border-color .15s;
+  }
+  .field textarea{ resize:vertical; min-height:80px; }
+  .field input:focus, .field textarea:focus, .field select:focus{ border-color:var(--red); background:var(--white); }
+  .row2{ display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  @media (max-width:520px){ .row2{ grid-template-columns:1fr; } }
+  .checkline{ display:flex; align-items:center; gap:8px; font-size:0.85rem; color:var(--ash); }
+
+  .divider{ height:1px; background:var(--line); margin:20px 0; }
+
+  .custom-grid{ display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+  @media (max-width:520px){ .custom-grid{ grid-template-columns:1fr; } }
+
+  .swatches{ display:flex; gap:8px; flex-wrap:wrap; }
+  .swatch{
+    display:flex; align-items:center; gap:6px; padding:6px 10px; border-radius:8px;
+    border:1.5px solid var(--line); cursor:pointer; font-size:0.76rem; font-weight:600; color:var(--ash); background:var(--paper);
+  }
+  .swatch .dot{ width:14px; height:14px; border-radius:50%; border:1px solid rgba(0,0,0,0.08); }
+  .swatch.active{ border-color:var(--ink); color:var(--ink); background:var(--white); }
+  .color-inputs{ display:flex; gap:10px; margin-top:8px; }
+  .color-inputs label{ font-size:0.72rem; color:var(--ash); display:flex; flex-direction:column; gap:4px; }
+  .color-inputs input[type=color]{ width:44px; height:32px; border:1px solid var(--line); border-radius:6px; padding:2px; background:var(--white); cursor:pointer; }
+
+  .ec-group{ display:flex; gap:6px; }
+  .ec-btn{ flex:1; text-align:center; padding:8px 4px; border-radius:8px; border:1.5px solid var(--line); background:var(--paper); font-family:'JetBrains Mono',monospace; font-weight:600; font-size:0.78rem; cursor:pointer; color:var(--ash); }
+  .ec-btn.active{ background:var(--red); border-color:var(--red); color:var(--white); }
+
+  input[type=range]{ width:100%; accent-color:var(--red); }
+  .size-label{ display:flex; justify-content:space-between; font-size:0.78rem; color:var(--ash); margin-top:4px; font-family:'JetBrains Mono',monospace; }
+
+  /* preview panel */
+  .preview-panel{ position:sticky; top:96px; text-align:center; }
+  .preview-stage{
+    background:var(--paper); border:1.5px dashed var(--line); border-radius:10px;
+    padding:22px; display:flex; align-items:center; justify-content:center; min-height:260px;
+  }
+  .preview-stage canvas{ width:100%; max-width:260px; height:auto; border-radius:6px; background:var(--white); box-shadow:var(--shadow); }
+  .empty-state{ color:var(--ash); font-size:0.85rem; }
+  .empty-state svg{ margin:0 auto 12px; opacity:0.35; }
+  .meta-line{ font-family:'JetBrains Mono', monospace; font-size:0.72rem; color:var(--ash); margin-top:14px; letter-spacing:0.02em; }
+  .btn-row{ display:flex; gap:8px; margin-top:16px; }
+  .btn{
+    flex:1; padding:11px 10px; border-radius:8px; font-weight:600; font-size:0.85rem;
+    border:1.5px solid var(--ink); cursor:pointer; text-decoration:none; text-align:center; transition:all .15s;
+    display:inline-flex; align-items:center; justify-content:center; gap:6px;
+  }
+  .btn-primary{ background:var(--red); border-color:var(--red); color:var(--white); }
+  .btn-primary:hover{ background:var(--red-dark); border-color:var(--red-dark); }
+  .btn-ghost{ background:var(--white); color:var(--ink); }
+  .btn-ghost:hover{ border-color:var(--red); color:var(--red-dark); }
+  .btn[disabled]{ opacity:0.45; pointer-events:none; }
+
+  .history{ margin-top:18px; }
+  .history h4{ font-size:0.72rem; text-transform:uppercase; letter-spacing:0.06em; color:var(--ash); margin-bottom:10px; text-align:left; }
+  .history-strip{ display:flex; gap:8px; overflow-x:auto; padding-bottom:4px; }
+  .history-item{ flex-shrink:0; width:46px; height:46px; border-radius:6px; border:1.5px solid var(--line); overflow:hidden; cursor:pointer; background:var(--white); }
+  .history-item:hover{ border-color:var(--red); }
+  .history-item canvas{ width:100%; height:100%; }
+
+  /* ---------- features ---------- */
+  .section{ padding:64px 0; }
+  .section-head{ max-width:560px; margin-bottom:36px; }
+  .section-head .eyebrow{ margin-bottom:14px; }
+  .section-head h2{ font-size:clamp(1.6rem,3vw,2.1rem); font-weight:700; }
+  .section-head p{ color:var(--ash); margin-top:10px; }
+
+  .feature-grid{ display:grid; grid-template-columns:repeat(3, 1fr); gap:20px; }
+  @media (max-width:860px){ .feature-grid{ grid-template-columns:repeat(2,1fr); } }
+  @media (max-width:560px){ .feature-grid{ grid-template-columns:1fr; } }
+  .feature-card{
+    background:var(--white); border:1px solid var(--line); border-radius:var(--radius);
+    padding:24px; position:relative;
+  }
+  .feature-card .finder-mark{ margin-bottom:14px; }
+  .feature-card h3{ font-size:1.02rem; font-weight:700; margin-bottom:8px; }
+  .feature-card p{ color:var(--ash); font-size:0.9rem; }
+
+  /* how it works */
+  .steps{ display:grid; grid-template-columns:repeat(3,1fr); gap:24px; counter-reset:step; }
+  @media (max-width:800px){ .steps{ grid-template-columns:1fr; } }
+  .step{ position:relative; padding-left:52px; }
+  .step .num{
+    position:absolute; left:0; top:0; width:38px; height:38px; border-radius:9px;
+    background:var(--ink); color:var(--white); display:flex; align-items:center; justify-content:center;
+    font-family:'JetBrains Mono',monospace; font-weight:700; font-size:0.95rem;
+  }
+  .step h3{ font-size:1rem; font-weight:700; margin-bottom:6px; }
+  .step p{ color:var(--ash); font-size:0.9rem; }
+
+  .band{ background:var(--ink); color:var(--white); }
+  .band .section-head p{ color:#cbb9b7; }
+  .band .step .num{ background:var(--red); }
+
+  footer{ border-top:1px solid var(--line); padding:34px 0; }
+  .footer-row{ display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:14px; }
+  footer p{ color:var(--ash); font-size:0.82rem; }
+  .footer-brand{ display:flex; align-items:center; gap:8px; font-weight:700; }
+
+  ::selection{ background:var(--red); color:var(--white); }
+  :focus-visible{ outline:2px solid var(--red); outline-offset:2px; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap nav">
+    <div class="brand">
+      <svg class="finder-mark" viewBox="0 0 30 30" xmlns="http://www.w3.org/2000/svg">
+        <rect x="1" y="1" width="28" height="28" rx="3" fill="none" stroke="#E8291C" stroke-width="3"/>
+        <rect x="9" y="9" width="12" height="12" rx="1.5" fill="#E8291C"/>
+      </svg>
+      ScanForge<span class="tag">QR</span>
+    </div>
+    <div class="nav-links">
+      <a href="#studio">Generator</a>
+      <a href="#features">Features</a>
+      <a href="#how">How it works</a>
+    </div>
+    <a class="nav-cta" href="#studio">Create a code</a>
+  </div>
+</header>
+
+<section class="hero">
+  <div class="wrap">
+    <div class="eyebrow">
+      <svg width="12" height="12" viewBox="0 0 30 30"><rect x="1" y="1" width="28" height="28" rx="3" fill="none" stroke="#B31712" stroke-width="4"/><rect x="9" y="9" width="12" height="12" fill="#B31712"/></svg>
+      Free · Private · No sign-up
+    </div>
+    <h1>Forge any link, note<br>or number into a <em>code</em>.</h1>
+    <p class="sub">Pick a type, fill in the details, and watch your QR code take shape as you type. Everything runs in your browser — nothing you enter is ever sent anywhere.</p>
+
+    <div class="studio" id="studio">
+      <!-- FORM PANEL -->
+      <div class="panel">
+        <div class="tabs" id="tabs">
+          <button class="tab active" data-type="link">Link</button>
+          <button class="tab" data-type="text">Text</button>
+          <button class="tab" data-type="wifi">Wi-Fi</button>
+          <button class="tab" data-type="email">Email</button>
+          <button class="tab" data-type="phone">Phone</button>
+          <button class="tab" data-type="contact">Contact</button>
+        </div>
+
+        <div id="fields"></div>
+
+        <div class="divider"></div>
+
+        <div class="custom-grid">
+          <div>
+            <label style="font-size:0.8rem;font-weight:600;display:block;margin-bottom:8px;">Color</label>
+            <div class="swatches" id="swatches">
+              <div class="swatch active" data-fg="#E8291C" data-bg="#FFFFFF"><span class="dot" style="background:#E8291C"></span>Forge</div>
+              <div class="swatch" data-fg="#201412" data-bg="#FFFFFF"><span class="dot" style="background:#201412"></span>Ink</div>
+              <div class="swatch" data-fg="#7A0F10" data-bg="#FDEAE8"><span class="dot" style="background:#7A0F10"></span>Ember</div>
+              <div class="swatch" data-fg="custom" data-bg="custom"><span class="dot" style="background:conic-gradient(#E8291C,#201412,#7A0F10)"></span>Custom</div>
+            </div>
+            <div class="color-inputs" id="customColors" style="display:none;">
+              <label>Foreground <input type="color" id="fgColor" value="#E8291C"></label>
+              <label>Background <input type="color" id="bgColor" value="#FFFFFF"></label>
+            </div>
+          </div>
+          <div>
+            <label style="font-size:0.8rem;font-weight:600;display:block;margin-bottom:8px;">Error correction</label>
+            <div class="ec-group">
+              <button class="ec-btn" data-ec="L">L</button>
+              <button class="ec-btn active" data-ec="M">M</button>
+              <button class="ec-btn" data-ec="Q">Q</button>
+              <button class="ec-btn" data-ec="H">H</button>
+            </div>
+            <p class="hint">Higher levels survive more damage or a logo overlay, at the cost of density.</p>
+          </div>
+        </div>
+
+        <div class="field" style="margin-top:16px;">
+          <label>Output size — <span id="sizeVal">440</span>px</label>
+          <input type="range" id="sizeRange" min="220" max="900" step="20" value="440">
+        </div>
+      </div>
+
+      <!-- PREVIEW PANEL -->
+      <div class="panel preview-panel">
+        <div class="preview-stage" id="stage">
+          <div class="empty-state" id="emptyState">
+            <svg width="54" height="54" viewBox="0 0 30 30"><rect x="1" y="1" width="28" height="28" rx="3" fill="none" stroke="#776b68" stroke-width="2.5"/><rect x="9" y="9" width="12" height="12" fill="#776b68"/></svg>
+            Your code will forge here
+          </div>
+          <canvas id="qrCanvas" style="display:none;"></canvas>
+        </div>
+        <div class="meta-line" id="metaLine">— · — px · EC —</div>
+        <div class="btn-row">
+          <button class="btn btn-primary" id="downloadPng" disabled>Download PNG</button>
+          <button class="btn btn-ghost" id="downloadSvg" disabled>Download SVG</button>
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-ghost" id="copyData" disabled>Copy data</button>
+          <button class="btn btn-ghost" id="printQr" disabled>Print</button>
+        </div>
+
+        <div class="history" id="historyWrap" style="display:none;">
+          <h4>Recent this session</h4>
+          <div class="history-strip" id="historyStrip"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="features">
+  <div class="wrap">
+    <div class="section-head">
+      <div class="eyebrow">Features</div>
+      <h2>Everything a QR code needs, nothing it doesn't.</h2>
+      <p>Built for people who need a clean code fast — marketers, event organizers, shop owners, or anyone sharing a Wi-Fi password without shouting it across the room.</p>
+    </div>
+    <div class="feature-grid">
+      <div class="feature-card">
+        <svg class="finder-mark" viewBox="0 0 30 30"><rect x="1" y="1" width="28" height="28" rx="3" fill="none" stroke="#E8291C" stroke-width="3"/><rect x="9" y="9" width="12" height="12" fill="#E8291C"/></svg>
+        <h3>Live preview</h3>
+        <p>Your code updates as you type — no "generate" button to hunt for, no page reloads.</p>
+      </div>
+      <div class="feature-card">
+        <svg class="finder-mark" viewBox="0 0 30 30"><rect x="1" y="1" width="28" height="28" rx="3" fill="none" stroke="#E8291C" stroke-width="3"/><rect x="9" y="9" width="12" height="12" fill="#E8291C"/></svg>
+        <h3>Six code types</h3>
+        <p>Links, plain text, Wi-Fi logins, email drafts, phone numbers, and contact cards.</p>
+      </div>
+      <div class="feature-card">
+        <svg class="finder-mark" viewBox="0 0 30 30"><rect x="1" y="1" width="28" height="28" rx="3" fill="none" stroke="#E8291C" stroke-width="3"/><rect x="9" y="9" width="12" height="12" fill="#E8291C"/></svg>
+        <h3>Custom colors</h3>
+        <p>Match your brand with preset palettes or pick exact foreground and background colors.</p>
+      </div>
+      <div class="feature-card">
+        <svg class="finder-mark" viewBox="0 0 30 30"><rect x="1" y="1" width="28" height="28" rx="3" fill="none" stroke="#E8291C" stroke-width="3"/><rect x="9" y="9" width="12" height="12" fill="#E8291C"/></svg>
+        <h3>PNG & SVG export</h3>
+        <p>Download a crisp raster for slides and social, or a vector for print at any size.</p>
+      </div>
+      <div class="feature-card">
+        <svg class="finder-mark" viewBox="0 0 30 30"><rect x="1" y="1" width="28" height="28" rx="3" fill="none" stroke="#E8291C" stroke-width="3"/><rect x="9" y="9" width="12" height="12" fill="#E8291C"/></svg>
+        <h3>Adjustable error correction</h3>
+        <p>Choose how much damage or overlay a code can take before it stops scanning.</p>
+      </div>
+      <div class="feature-card">
+        <svg class="finder-mark" viewBox="0 0 30 30"><rect x="1" y="1" width="28" height="28" rx="3" fill="none" stroke="#E8291C" stroke-width="3"/><rect x="9" y="9" width="12" height="12" fill="#E8291C"/></svg>
+        <h3>Private by design</h3>
+        <p>Codes are built entirely in your browser. Nothing you type is uploaded or stored.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section band" id="how">
+  <div class="wrap">
+    <div class="section-head">
+      <div class="eyebrow" style="background:rgba(232,41,28,0.18); color:#ff8f86;">How it works</div>
+      <h2>Three steps, no learning curve.</h2>
+      <p>The whole flow lives on this one page — start above whenever you're ready.</p>
+    </div>
+    <div class="steps">
+      <div class="step">
+        <div class="num">1</div>
+        <h3>Choose a type</h3>
+        <p>Link, text, Wi-Fi, email, phone, or a full contact card — pick the tab that fits.</p>
+      </div>
+      <div class="step">
+        <div class="num">2</div>
+        <h3>Fill in the details</h3>
+        <p>Your code redraws itself instantly, so you can see exactly what you're about to share.</p>
+      </div>
+      <div class="step">
+        <div class="num">3</div>
+        <h3>Download & share</h3>
+        <p>Grab a PNG for quick use or an SVG for clean, high-resolution printing.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap footer-row">
+    <div class="footer-brand">
+      <svg class="finder-mark" width="22" height="22" viewBox="0 0 30 30"><rect x="1" y="1" width="28" height="28" rx="3" fill="none" stroke="#E8291C" stroke-width="3"/><rect x="9" y="9" width="12" height="12" fill="#E8291C"/></svg>
+      ScanForge
+    </div>
+    <p>Built entirely client-side — your data never leaves this page.</p>
+  </div>
+</footer>
+
+<script>
+(function(){
+  const state = {
+    type: 'link',
+    ec: 'M',
+    fg: '#E8291C',
+    bg: '#FFFFFF',
+    size: 440
+  };
+  const history = [];
+
+  const fieldsEl = document.getElementById('fields');
+  const tabsEl = document.getElementById('tabs');
+  const canvas = document.getElementById('qrCanvas');
+  const emptyState = document.getElementById('emptyState');
+  const metaLine = document.getElementById('metaLine');
+  const sizeRange = document.getElementById('sizeRange');
+  const sizeVal = document.getElementById('sizeVal');
+  const downloadPngBtn = document.getElementById('downloadPng');
+  const downloadSvgBtn = document.getElementById('downloadSvg');
+  const copyDataBtn = document.getElementById('copyData');
+  const printBtn = document.getElementById('printQr');
+  const historyWrap = document.getElementById('historyWrap');
+  const historyStrip = document.getElementById('historyStrip');
+
+  const FIELD_TEMPLATES = {
+    link: () => `
+      <div class="field">
+        <label>URL</label>
+        <input type="text" id="f_url" placeholder="https://example.com">
+        <p class="hint">Include https:// so it opens directly when scanned.</p>
+      </div>`,
+    text: () => `
+      <div class="field">
+        <label>Text</label>
+        <textarea id="f_text" placeholder="Anything you want to share — a note, a quote, an address."></textarea>
+      </div>`,
+    wifi: () => `
+      <div class="field">
+        <label>Network name (SSID)</label>
+        <input type="text" id="f_ssid" placeholder="Home Wi-Fi">
+      </div>
+      <div class="row2">
+        <div class="field">
+          <label>Password</label>
+          <input type="text" id="f_pass" placeholder="••••••••">
+        </div>
+        <div class="field">
+          <label>Security</label>
+          <select id="f_sec">
+            <option value="WPA">WPA / WPA2</option>
+            <option value="WEP">WEP</option>
+            <option value="nopass">None (open)</option>
+          </select>
+        </div>
+      </div>
+      <label class="checkline"><input type="checkbox" id="f_hidden"> Hidden network</label>`,
+    email: () => `
+      <div class="field">
+        <label>To</label>
+        <input type="email" id="f_to" placeholder="hello@example.com">
+      </div>
+      <div class="field">
+        <label>Subject</label>
+        <input type="text" id="f_subject" placeholder="Subject line">
+      </div>
+      <div class="field">
+        <label>Message</label>
+        <textarea id="f_body" placeholder="Optional message"></textarea>
+      </div>`,
+    phone: () => `
+      <div class="field">
+        <label>Phone number</label>
+        <input type="tel" id="f_phone" placeholder="+1 555 010 2020">
+        <p class="hint">Include the country code so it dials correctly anywhere.</p>
+      </div>`,
+    contact: () => `
+      <div class="row2">
+        <div class="field"><label>Full name</label><input type="text" id="f_name" placeholder="Jordan Lee"></div>
+        <div class="field"><label>Organization</label><input type="text" id="f_org" placeholder="Studio Name"></div>
+      </div>
+      <div class="row2">
+        <div class="field"><label>Phone</label><input type="tel" id="f_cphone" placeholder="+1 555 010 2020"></div>
+        <div class="field"><label>Email</label><input type="email" id="f_cemail" placeholder="jordan@example.com"></div>
+      </div>`
+  };
+
+  function renderFields(){
+    fieldsEl.innerHTML = FIELD_TEMPLATES[state.type]();
+    fieldsEl.querySelectorAll('input, textarea, select').forEach(el=>{
+      el.addEventListener('input', scheduleUpdate);
+      el.addEventListener('change', scheduleUpdate);
+    });
+  }
+
+  function esc(v){ return (v||'').replace(/([\\:;,])/g, '\\$1'); }
+
+  function buildData(){
+    const g = id => (document.getElementById(id)?.value || '').trim();
+    switch(state.type){
+      case 'link': return g('f_url');
+      case 'text': return g('f_text');
+      case 'wifi': {
+        const ssid = g('f_ssid'); if(!ssid) return '';
+        const sec = document.getElementById('f_sec')?.value || 'WPA';
+        const pass = g('f_pass');
+        const hidden = document.getElementById('f_hidden')?.checked ? 'true' : 'false';
+        return `WIFI:T:${sec};S:${esc(ssid)};P:${sec==='nopass'?'':esc(pass)};H:${hidden};;`;
+      }
+      case 'email': {
+        const to = g('f_to'); if(!to) return '';
+        const subject = encodeURIComponent(g('f_subject'));
+        const body = encodeURIComponent(g('f_body'));
+        return `mailto:${to}?subject=${subject}&body=${body}`;
+      }
+      case 'phone': {
+        const p = g('f_phone'); return p ? `tel:${p}` : '';
+      }
+      case 'contact': {
+        const name = g('f_name'); if(!name) return '';
+        const org = g('f_org'); const phone = g('f_cphone'); const email = g('f_cemail');
+        return `BEGIN:VCARD\nVERSION:3.0\nFN:${name}\n${org?`ORG:${org}\n`:''}${phone?`TEL:${phone}\n`:''}${email?`EMAIL:${email}\n`:''}END:VCARD`;
+      }
+    }
+    return '';
+  }
+
+  let currentQR = null;
+  let currentData = '';
+
+  function generate(){
+    const data = buildData();
+    currentData = data;
+    if(!data){
+      canvas.style.display = 'none';
+      emptyState.style.display = 'block';
+      metaLine.textContent = '— · — px · EC —';
+      [downloadPngBtn, downloadSvgBtn, copyDataBtn, printBtn].forEach(b => b.disabled = true);
+      currentQR = null;
+      return;
+    }
+    try{
+      const qr = qrcode(0, state.ec);
+      qr.addData(data);
+      qr.make();
+      currentQR = qr;
+      const actual = drawToCanvas(canvas, qr, state.size, state.fg, state.bg);
+      canvas.style.display = 'block';
+      emptyState.style.display = 'none';
+      metaLine.textContent = `${state.type.toUpperCase()} · ${actual}×${actual} PX · EC ${state.ec}`;
+      [downloadPngBtn, downloadSvgBtn, copyDataBtn, printBtn].forEach(b => b.disabled = false);
+      pushHistory(data, qr);
+    }catch(e){
+      metaLine.textContent = 'Could not build this code — try shorter input.';
+    }
+  }
+
+  function drawToCanvas(cv, qr, sizePx, fg, bg, margin){
+    margin = margin === undefined ? 4 : margin;
+    const count = qr.getModuleCount();
+    const moduleSize = Math.max(1, Math.floor(sizePx / (count + margin*2)));
+    const actual = moduleSize * (count + margin*2);
+    cv.width = actual; cv.height = actual;
+    const ctx = cv.getContext('2d');
+    ctx.fillStyle = bg;
+    ctx.fillRect(0,0,actual,actual);
+    ctx.fillStyle = fg;
+    for(let r=0;r<count;r++){
+      for(let c=0;c<count;c++){
+        if(qr.isDark(r,c)){
+          ctx.fillRect((c+margin)*moduleSize, (r+margin)*moduleSize, moduleSize, moduleSize);
+        }
+      }
+    }
+    return actual;
+  }
+
+  function buildSVG(qr, sizePx, fg, bg, margin){
+    margin = margin === undefined ? 4 : margin;
+    const count = qr.getModuleCount();
+    const unit = sizePx / (count + margin*2);
+    let rects = '';
+    for(let r=0;r<count;r++){
+      for(let c=0;c<count;c++){
+        if(qr.isDark(r,c)){
+          rects += `<rect x="${((c+margin)*unit).toFixed(2)}" y="${((r+margin)*unit).toFixed(2)}" width="${unit.toFixed(2)}" height="${unit.toFixed(2)}"/>`;
+        }
+      }
+    }
+    return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${sizePx} ${sizePx}" width="${sizePx}" height="${sizePx}"><rect width="100%" height="100%" fill="${bg}"/><g fill="${fg}">${rects}</g></svg>`;
+  }
+
+  function pushHistory(data, qr){
+    const last = history[0];
+    if(last && last.data === data && last.type === state.type) return;
+    history.unshift({ type: state.type, data, fg: state.fg, bg: state.bg, ec: state.ec });
+    if(history.length > 8) history.pop();
+    renderHistory();
+  }
+
+  function renderHistory(){
+    if(!history.length){ historyWrap.style.display = 'none'; return; }
+    historyWrap.style.display = 'block';
+    historyStrip.innerHTML = '';
+    history.forEach(item=>{
+      const wrap = document.createElement('div');
+      wrap.className = 'history-item';
+      const cv = document.createElement('canvas');
+      wrap.appendChild(cv);
+      historyStrip.appendChild(wrap);
+      try{
+        const qr = qrcode(0, item.ec);
+        qr.addData(item.data);
+        qr.make();
+        drawToCanvas(cv, qr, 92, item.fg, item.bg, 2);
+      }catch(e){}
+      wrap.addEventListener('click', ()=>{
+        setActiveTab(item.type);
+        state.type = item.type;
+        renderFields();
+        requestAnimationFrame(()=>{
+          restoreFieldsFromData(item);
+          generate();
+        });
+      });
+    });
+  }
+
+  function restoreFieldsFromData(item){
+    // best-effort restore: re-parse simple cases
+    const set = (id, v) => { const el = document.getElementById(id); if(el) el.value = v; };
+    if(item.type === 'link') set('f_url', item.data);
+    if(item.type === 'text') set('f_text', item.data);
+    if(item.type === 'phone') set('f_phone', item.data.replace('tel:',''));
+  }
+
+  let debounceTimer = null;
+  function scheduleUpdate(){
+    clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(generate, 150);
+  }
+
+  function setActiveTab(type){
+    tabsEl.querySelectorAll('.tab').forEach(t=>{
+      t.classList.toggle('active', t.dataset.type === type);
+    });
+  }
+
+  tabsEl.addEventListener('click', e=>{
+    const btn = e.target.closest('.tab');
+    if(!btn) return;
+    state.type = btn.dataset.type;
+    setActiveTab(state.type);
+    renderFields();
+    generate();
+  });
+
+  document.getElementById('swatches').addEventListener('click', e=>{
+    const sw = e.target.closest('.swatch');
+    if(!sw) return;
+    document.querySelectorAll('.swatch').forEach(s=>s.classList.remove('active'));
+    sw.classList.add('active');
+    const customColors = document.getElementById('customColors');
+    if(sw.dataset.fg === 'custom'){
+      customColors.style.display = 'flex';
+      state.fg = document.getElementById('fgColor').value;
+      state.bg = document.getElementById('bgColor').value;
+    }else{
+      customColors.style.display = 'none';
+      state.fg = sw.dataset.fg;
+      state.bg = sw.dataset.bg;
+    }
+    generate();
+  });
+
+  document.getElementById('fgColor').addEventListener('input', e=>{ state.fg = e.target.value; generate(); });
+  document.getElementById('bgColor').addEventListener('input', e=>{ state.bg = e.target.value; generate(); });
+
+  document.querySelectorAll('.ec-btn').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      document.querySelectorAll('.ec-btn').forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+      state.ec = btn.dataset.ec;
+      generate();
+    });
+  });
+
+  sizeRange.addEventListener('input', ()=>{
+    state.size = parseInt(sizeRange.value, 10);
+    sizeVal.textContent = state.size;
+    generate();
+  });
+
+  downloadPngBtn.addEventListener('click', ()=>{
+    if(!currentQR) return;
+    canvas.toBlob(blob=>{
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = `scanforge-${state.type}.png`;
+      a.click();
+      URL.revokeObjectURL(url);
+    });
+  });
+
+  downloadSvgBtn.addEventListener('click', ()=>{
+    if(!currentQR) return;
+    const svg = buildSVG(currentQR, state.size, state.fg, state.bg);
+    const blob = new Blob([svg], { type: 'image/svg+xml' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = `scanforge-${state.type}.svg`;
+    a.click();
+    URL.revokeObjectURL(url);
+  });
+
+  copyDataBtn.addEventListener('click', ()=>{
+    if(!currentData) return;
+    navigator.clipboard.writeText(currentData).then(()=>{
+      const original = copyDataBtn.textContent;
+      copyDataBtn.textContent = 'Copied!';
+      setTimeout(()=> copyDataBtn.textContent = original, 1200);
+    });
+  });
+
+  printBtn.addEventListener('click', ()=>{
+    if(!currentQR) return;
+    const dataUrl = canvas.toDataURL('image/png');
+    const w = window.open('', '_blank');
+    w.document.write(`<img src="${dataUrl}" style="width:320px;display:block;margin:60px auto;">`);
+    w.document.close();
+    w.focus();
+    w.print();
+  });
+
+  // init
+  renderFields();
+  document.getElementById('f_url').value = 'https://claude.ai';
+  generate();
+})();
+</script>
+</body>
+</html>
